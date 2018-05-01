@@ -1,0 +1,98 @@
+---
+title: "HPM573 Statistical Output"
+author: "Lanxin Jiang"
+date: "April 29, 2018"
+output: word_document
+---
+import simulation cohort
+```{r}
+cohort <- read.csv ("C:\\Users\\lanxin\\Desktop\\2018Spring\\HPM573\\c.csv", header=TRUE, sep=",")
+cohort2 <- read.csv ("C:\\Users\\lanxin\\Desktop\\2018Spring\\HPM573\\c2.csv", header=TRUE, sep=",")
+cohort$group="new"
+cohort2$group="old"
+cohort_comb=rbind(cohort,cohort2)
+recip<-cohort[cohort$Kidney=="True",]
+recip2<-cohort2[cohort2$Kidney=="True",]
+recip_comb<-cohort_comb[cohort_comb$Kidney=="True",]
+cohort_comb$Event=as.numeric(cohort_comb$Event)
+cohort$Event=as.numeric(cohort$Event)
+cohort2$Event=as.numeric(cohort2$Event)
+
+```
+
+Demographic Features
+```{r}
+#######Chi-square test for categorical variables
+#age
+age_tb<-table(recip_comb$age_cat,recip_comb$group)
+age_tb
+chisq.test(age_tb)
+#diabetes
+db_tb<-table(recip_comb$diabetes,recip_comb$group)
+db_tb
+chisq.test(db_tb)
+#prior donor
+pr_tx<-table(recip_comb$Prior.Transplant,recip_comb$group)
+pr_tx
+chisq.test(pr_tx)
+#######t test for continous variables
+t.test(recip$age,recip2$age)
+t.test(recip$cpra,recip2$cpra)
+t.test(recip$waitime_update,recip2$waitime_update)
+
+```
+
+
+survival analysis
+
+```{r}
+library(survival)
+
+# K-M Curve Alone (log log CI)
+kmsurv<-survfit(Surv(time, event=Event) ~ group, data=cohort_comb,  conf.type="log-log")
+#summary(kmsurv)
+plot(kmsurv,ylim=c(0,0.35), xlab="Time (weeks)", ylab="Survival Probability")
+
+#not significant group difference
+survdiff(Surv(time, event=Event) ~ group, data=cohort_comb, rho=1)
+```
+
+
+
+
+```{r}
+#neglect censoring data
+cohort_nocensor=cohort[cohort$Censor=="False",]
+cohort2_nocensor=cohort2[cohort2$Censor=="False",]
+cohort_combcensor=cohort_comb[cohort_comb$Censor=="False",]
+
+#significant diabetic difference
+#diabetes
+survdiff(Surv(time, event=Event) ~ diabetes, data=cohort_nocensor,rho=0)
+survdiff(Surv(time, event=Event) ~ diabetes, data=cohort_nocensor,rho=1)
+survdiff(Surv(time, event=Event) ~ diabetes, data=cohort2_nocensor,rho=0)
+survdiff(Surv(time, event=Event) ~ diabetes, data=cohort2_nocensor,rho=1)
+#age
+
+survdiff(Surv(time, event=Event) ~ age_cat, data=cohort_nocensor)
+survdiff(Surv(time, event=Event) ~ age_cat, data=cohort2_nocensor)
+survdiff(Surv(time,event=Event) ~ age_cat, data=cohort_nocensor,rho=1)
+survdiff(Surv(time, event=Event) ~ age_cat, data=cohort2_nocensor,rho = 1)
+
+#age stratified by diabetes
+survdiff(Surv(time, event=Event) ~ age_cat+ strata(diabetes), data=cohort_nocensor)
+survdiff(Surv(time, event=Event) ~ age_cat+ strata(diabetes), data=cohort2_nocensor)
+survdiff(Surv(time) ~ age_cat+ strata(diabetes), data=cohort_nocensor,rho=1)
+survdiff(Surv(time, event=Event) ~ age_cat+ strata(diabetes), data=cohort2_nocensor,rho = 1)
+
+#EPTS
+survdiff(Surv(time, event=Event) ~ priorityEPTS, data=cohort_nocensor)
+survdiff(Surv(time, event=Event) ~ priorityEPTS, data=cohort2_nocensor)
+survdiff(Surv(time,event=Event) ~ priorityEPTS, data=cohort_nocensor,rho=1)
+survdiff(Surv(time, event=Event) ~ priorityEPTS, data=cohort2_nocensor,rho = 1)
+
+
+
+
+```
+
